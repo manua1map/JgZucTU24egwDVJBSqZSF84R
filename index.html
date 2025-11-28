@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>License Key Generator</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 28px;
+}
+
+.subtitle {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.key-display {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.key-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 12px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.key-value {
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    word-break: break-all;
+}
+
+.input-field {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 20px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+.input-field:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+}
+
+.btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.btn:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn.copied {
+    background: #4caf50;
+}
+
+.footer {
+    margin-top: 30px;
+    color: #999;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="icon">🔑</div>
+    <h1>License Key Generator</h1>
+    <p class="subtitle">Enter your encryption key to generate a license key.</p>
+
+    <input type="text" id="userKey" class="input-field" placeholder="Enter encryption key">
+
+    <div class="key-display">
+        <div class="key-label">Your License Key</div>
+        <div class="key-value" id="licenseKey">
+            <span class="loading">Waiting...</span>
+        </div>
+    </div>
+
+    <button class="btn" id="copyBtn" onclick="copyKey()">Copy Key</button>
+
+    <div class="footer">
+        Key is generated using your IP address.
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script>
+let userIP = null;
+
+// Fetch IP once
+async function fetchIP() {
+    try {
+        const response = await fetch('https://ipv4.icanhazip.com/');
+        userIP = (await response.text()).trim();
+    } catch (error) {
+        console.error("Failed to get IP:", error);
+        userIP = "0.0.0.0";
+    }
+}
+fetchIP();
+
+function toBase62(hexHash, length = 16) {
+    const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    let result = "";
+    for (let i = 0; i < hexHash.length && result.length < length; i += 2) {
+        const byteStr = hexHash.substr(i, 2);
+        const value = parseInt(byteStr, 16);
+        result += base62Chars[value % 62];
+    }
+    while (result.length < length) {
+        result += base62Chars[Math.floor(Math.random() * 62)];
+    }
+    return result.substr(0, length);
+}
+
+function generateKey(ip, encryptionKey) {
+    const combined = ip + encryptionKey;
+    const hash = CryptoJS.SHA256(combined).toString();
+    return toBase62(hash, 16);
+}
+
+const inputField = document.getElementById('userKey');
+inputField.addEventListener('input', () => {
+    const encryptionKey = inputField.value.trim();
+    const licenseEl = document.getElementById('licenseKey');
+
+    if (!encryptionKey) {
+        licenseEl.innerHTML = '<span class="loading">Waiting...</span>';
+        return;
+    }
+
+    if (!userIP) {
+        licenseEl.innerHTML = '<span class="loading">Fetching IP...</span>';
+        return;
+    }
+
+    const key = generateKey(userIP, encryptionKey);
+    licenseEl.textContent = key;
+});
+
+function copyKey() {
+    const key = document.getElementById('licenseKey').textContent;
+    if (!key || key.includes('Waiting') || key.includes('Fetching')) return;
+
+    navigator.clipboard.writeText(key).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied.';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = 'Copy Key';
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+</script>
+</body>
+</html>
